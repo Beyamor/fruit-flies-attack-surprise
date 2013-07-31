@@ -86,29 +86,25 @@ window.onload = ->
 		update: ->
 			# flies love fruit
 			fruitForce = {x: 0, y: 0}
-			dx = @fruit.sprite.x - @sprite.x
-			dy = @fruit.sprite.y - @sprite.y
-			distance = Math.sqrt(dx*dx + dy*dy)
+			difference = v.subtract @fruit.sprite, @sprite
+			distance = v.length difference
 			if distance > 0
-				dx /= distance
-				dy /= distance
+				desiredSpeed = distance * 0.5
+				desiredVel = v.scale(v.normal(difference), desiredSpeed)
 
-				desiredSpeed = distance * 0.05
-				desiredVelX = dx * desiredSpeed
-				desiredVelY = dy * desiredSpeed
-
-				fruitForce = {x: desiredVelX - @vel.x, y: desiredVelY - @vel.y}
+				fruitForce = v.subtract desiredVel, @vel
 
 			# flies hate flies?
+			hateDistance = 200
 			flyForce = v.zero()
 			for fly in @flies when fly isnt this
 				difference = v.subtract @sprite, fly.sprite
 				#console.log "difference is #{difference.x}, #{difference.y}"
 				distance = v.length difference
 				#console.log "distance is #{distance}"
-				continue if distance > 60
+				continue if distance > hateDistance
 
-				magnitude = (60 - distance)
+				magnitude = ((hateDistance - distance) / hateDistance) * @maxForce * 0.8
 				flyForce = v.add(flyForce, v.scale(v.normal(difference), magnitude))
 
 			#console.log "fly force is #{flyForce.x}, #{flyForce.y}"
