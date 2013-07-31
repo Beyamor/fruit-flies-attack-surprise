@@ -16,7 +16,7 @@ window.onload = ->
 		add: (v1, v2) ->
 			v.create v1.x + v2.x, v1.y + v2.y
 
-		substract: (v1, v2) ->
+		subtract: (v1, v2) ->
 			v.create v1.x - v2.x, v1.y - v2.y
 
 		scale: (v1, scale) ->
@@ -27,14 +27,17 @@ window.onload = ->
 			{x: 0, y: 0}
 
 		length: ({x: x, y: y}) ->
-			Math.sqrt x*x + y*y
+			Math.sqrt(x*x + y*y)
 
 		normal: (v1) ->
 			length = v.length v1
 			if length > 0
-				v.create v1.x/length, v2.y/length
+				v.create(v1.x/length, v1.y/length)
 			else
 				v.zero()
+
+		toString: ({x: x, y: y}) ->
+			"(#{x}, #{y})"
 	}
 
 	class Entity
@@ -77,11 +80,11 @@ window.onload = ->
 			@sprite.draw()
 
 	class Fly extends Entity
-		constructor: (@fruit, x, y) ->
+		constructor: (@fruit, @flies, x, y) ->
 			super("fruit-fly", x, y)
 
 		update: ->
-
+			# flies love fruit
 			fruitForce = {x: 0, y: 0}
 			dx = @fruit.sprite.x - @sprite.x
 			dy = @fruit.sprite.y - @sprite.y
@@ -96,7 +99,21 @@ window.onload = ->
 
 				fruitForce = {x: desiredVelX - @vel.x, y: desiredVelY - @vel.y}
 
-			@applyForces fruitForce
+			# flies hate flies?
+			flyForce = v.zero()
+			for fly in @flies when fly isnt this
+				difference = v.subtract @sprite, fly.sprite
+				#console.log "difference is #{difference.x}, #{difference.y}"
+				distance = v.length difference
+				#console.log "distance is #{distance}"
+				continue if distance > 60
+
+				magnitude = (60 - distance)
+				flyForce = v.add(flyForce, v.scale(v.normal(difference), magnitude))
+
+			#console.log "fly force is #{flyForce.x}, #{flyForce.y}"
+
+			@applyForces flyForce, fruitForce
 
 			super()
 
@@ -107,7 +124,9 @@ window.onload = ->
 	playState = {
 		setup: =>
 			@fruit = new Fruit GAME_WIDTH/2, GAME_HEIGHT/2
-			@flies = (new Fly(@fruit, x, y) for [x, y] in [[30, 20], [100, 50], [200, 30]])
+			@flies = []
+			for [x, y] in [[30, 20], [100, 50], [200, 30]]
+				@flies.push(new Fly(@fruit, @flies, x, y))
 
 			jaws.preventDefaultKeys ["up", "down", "left", "right", "space"]
 
