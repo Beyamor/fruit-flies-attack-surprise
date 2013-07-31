@@ -9,49 +9,69 @@ window.onload = ->
 			y: y
 		}
 
+	v = {
+		create: (x, y) ->
+			{x: x, y: y}
+
+		add: (v1, v2) ->
+			v.create v1.x + v2.x, v1.y + v2.y
+
+		substract: (v1, v2) ->
+			v.create v1.x - v2.x, v1.y - v2.y
+
+		scale: (v1, scale) ->
+			v.create v1.x * scale, v1.y * scale
+
+		zero: ->
+			v.create 0, 0
+			{x: 0, y: 0}
+
+		length: ({x: x, y: y}) ->
+			Math.sqrt x*x + y*y
+
+		normal: (v1) ->
+			length = v.length v1
+			if length > 0
+				v.create v1.x/length, v2.y/length
+			else
+				v.zero()
+	}
+
 	class Entity
 		constructor: (sprite, x, y) ->
 			@sprite = createSprite sprite, x, y
-			@vel = {x: 0, y: 0}
-			@acc = {x: 0, y: 0}
+			@vel = v.zero()
+			@acc = v.zero()
 			@mass = 10
 			@maxForce = 10
 			@maxSpeed = 5
 
 		applyForces: (forces...) ->
-			resultingForce = {x: 0, y: 0}
+			resultingForce = v.zero()
 			magnitudeSum = 0
 			for force in forces
-				magnitude = Math.sqrt(force.x*force.x + force.y*force.y)
+				magnitude = v.length force
 				continue unless magnitude > 0
 
 				if magnitudeSum + magnitude < @maxForce
 					magnitudeSum += magnitude
-					resultingForce.x += force.x
-					resultingForce.y += force.y
+					resultingForce = v.add resultingForce, force
 				else
 					scale = Math.max(0, (@maxForce - magnitudeSum) / magnitude)
-					resultingForce.x += force.x * scale
-					resultingForce.y += force.y * scale
+					resultingForce = v.add resultingForce, v.scale(force, scale)
 					break
 
-			@acc.x += resultingForce.x / @mass
-			@acc.y += resultingForce.y / @mass
+			@acc = v.scale resultingForce, (1/@mass)
 
 		update: ->
-			@vel.x += @acc.x
-			@vel.y += @acc.y
+			@vel = v.add @vel, @acc
 
-			speed = Math.sqrt(@vel.x*@vel.x + @vel.y*@vel.y)
+			speed = v.length @vel
 			if speed > @maxSpeed
-				@vel.x *= @maxSpeed / speed
-				@vel.y *= @maxSpeed / speed
+				@vel = v.scale @vel, (@maxSpeed / speed)
 
 			@sprite.x += @vel.x
 			@sprite.y += @vel.y
-
-		speed: ->
-			Math.sqrt @vel.x*@vel.x + @vel.y*@vel.y
 
 		draw: ->
 			@sprite.draw()
