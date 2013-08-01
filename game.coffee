@@ -2,6 +2,11 @@ window.onload = ->
 	GAME_WIDTH = 800
 	GAME_HEIGHT = 600
 
+	random = {
+		coinFlip: -> Math.random() < 0.5
+		inRange: (min, max) -> min + Math.random() * (max - min)
+	}
+
 	v = {
 		create: (x, y) ->
 			{x: x, y: y}
@@ -110,16 +115,35 @@ window.onload = ->
 		constructor: (x, y) ->
 			super("fruit", x, y)
 
+	class FlySpawner
+		constructor: (@fruit, @flies) ->
+			@ticks = 0
+			@maxTicks = 150
+
+		update: ->
+			++@ticks
+			if @ticks >= @maxTicks
+				@ticks = 0
+
+				if random.coinFlip()
+					x = if random.coinFlip() then -100 else GAME_WIDTH + 100
+					y = random.inRange(0, GAME_HEIGHT)
+				else
+					y = if random.coinFlip() then -100 else GAME_HEIGHT + 100
+					x = random.inRange(0, GAME_WIDTH)
+
+				@flies.push new Fly @fruit, @flies, x, y
+
 	playState = {
 		setup: =>
 			@fruit = new Fruit GAME_WIDTH/2, GAME_HEIGHT/2
 			@flies = []
-			for [x, y] in [[30, 20], [100, 50], [200, 30]]
-				@flies.push(new Fly(@fruit, @flies, x, y))
+			@spawner = new FlySpawner @fruit, @flies
 
 			jaws.preventDefaultKeys ["up", "down", "left", "right", "space"]
 
 		update: =>
+			@spawner.update()
 			fly.update() for fly in @flies
 
 		draw: =>
