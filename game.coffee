@@ -141,13 +141,21 @@ window.onload = ->
 				@entities.flies.push new Fly @entities, x, y
 
 	class Shot extends Entity
-		constructor: (x, y, direction) ->
+		constructor: (@entities, x, y, direction) ->
 			super "shot", x, y
 			direction *= Math.PI / 180
 			@vel = v.scale(v.create(Math.cos(direction), Math.sin(direction)), 10)
 
+		update: ->
+			super()
+
+			flies = jaws.collideOneWithMany this, @entities.flies
+			for fly in flies
+				@entities.flies.remove fly
+			@entities.shots.remove this if flies.length isnt 0
+
 	class Gun extends Entity
-		constructor: ({shots: @shots}, x, y) ->
+		constructor: (@entities, x, y) ->
 			super "gun", x, y
 			@maxTick = 500
 			@tick = @maxTick
@@ -160,7 +168,7 @@ window.onload = ->
 			@tick += jaws.game_loop.tick_duration
 			if jaws.pressed("left_mouse_button") and @tick >= @maxTick
 				@tick = 0
-				@shots.push new Shot @x, @y, @angle
+				@entities.shots.push new Shot @entities, @x, @y, @angle
 
 	playState = {
 		setup: =>
