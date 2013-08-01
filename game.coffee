@@ -51,6 +51,7 @@ window.onload = ->
 			@mass = 10
 			@maxForce = 10
 			@maxSpeed = 5
+			@radius = @width / 2
 
 		applyForces: (forces...) ->
 			resultingForce = v.zero()
@@ -99,10 +100,12 @@ window.onload = ->
 			# flies hate flies?
 			hateDistance = 200
 			flyForce = v.zero()
-			for fly in @flies when fly isnt this
+			@flies.forEach (fly, _, __) =>
+				return if fly is this
+
 				difference = v.subtract this, fly
 				distance = v.length difference
-				continue if distance > hateDistance
+				return if distance > hateDistance
 
 				magnitude = ((hateDistance - distance) / hateDistance) * @maxForce * 0.4
 				flyForce = v.add(flyForce, v.scale(v.normal(difference), magnitude))
@@ -118,10 +121,10 @@ window.onload = ->
 	class FlySpawner
 		constructor: (@fruit, @flies) ->
 			@ticks = 0
-			@maxTicks = 150
+			@maxTicks = 1500
 
 		update: ->
-			++@ticks
+			@ticks += jaws.game_loop.tick_duration
 			if @ticks >= @maxTicks
 				@ticks = 0
 
@@ -137,25 +140,57 @@ window.onload = ->
 
 				@flies.push new Fly @fruit, @flies, x, y
 
+	class Shot extends Entity
+		constructor: (x, y, direction) ->
+			super "shot", x, y
+			direction *= Math.PI / 180
+			@vel = v.scale(v.create(Math.cos(direction), Math.sin(direction)), 10)
+
+	class Gun extends Entity
+		constructor: (@shots, x, y) ->
+			super "gun", x, y
+			@maxTick = 500
+			@tick = @maxTick
+
+		update: ->
+			dx = jaws.mouse_x - @x
+			dy = jaws.mouse_y - @y
+			@angle = Math.atan2(dy, dx) * 180 / Math.PI
+
+			@tick += jaws.game_loop.tick_duration
+			if jaws.pressed("left_mouse_button") and @tick >= @maxTick
+				@tick = 0
+				@shots.push new Shot @x, @y, @angle
+
 	playState = {
 		setup: =>
 			@fruit = new Fruit GAME_WIDTH/2, GAME_HEIGHT - 50
-			@flies = []
+			@flies = new jaws.SpriteList
+			@shots = new jaws.SpriteList
 			@spawner = new FlySpawner @fruit, @flies
+			@guns = new jaws.SpriteList
+			@guns.push new Gun(@shots, GAME_WIDTH/2 - 100, GAME_HEIGHT - 25)
+			@guns.push new Gun(@shots, GAME_WIDTH/2 + 100, GAME_HEIGHT - 25)
 
 			jaws.preventDefaultKeys ["up", "down", "left", "right", "space"]
 
 		update: =>
 			@spawner.update()
-			fly.update() for fly in @flies
+			@guns.update()
+			@shots.update()
+			@flies.update()
 
 		draw: =>
 			jaws.clear()
-			fly.draw() for fly in @flies
+			@shots.draw()
+			@guns.draw()
+			@flies.draw()
 			@fruit.draw()
 	}
 
 	jaws.assets.add "assets/img/fruit-fly.png"
 	jaws.assets.add "assets/img/fruit.png"
+	jaws.assets.add "assets/img/shot.png"
+	jaws.assets.add "assets/img/gun.png"
 	jaws.init {width: GAME_WIDTH, height: GAME_HEIGHT}
 	jaws.start playState
