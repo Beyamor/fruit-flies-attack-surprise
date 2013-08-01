@@ -83,7 +83,7 @@ window.onload = ->
 			@angle = Math.atan2(@vel.y, @vel.x) * 180 / Math.PI
 
 	class Fly extends Entity
-		constructor: (@fruit, @flies, x, y) ->
+		constructor: ({fruit: @fruit, flies: @flies}, x, y) ->
 			super("fruit-fly", x, y)
 
 		update: ->
@@ -119,7 +119,7 @@ window.onload = ->
 			super("fruit", x, y)
 
 	class FlySpawner
-		constructor: (@fruit, @flies) ->
+		constructor: (@entities) ->
 			@ticks = 0
 			@maxTicks = 1500
 
@@ -138,7 +138,7 @@ window.onload = ->
 					y = -100
 					x = random.inRange(0, GAME_WIDTH)
 
-				@flies.push new Fly @fruit, @flies, x, y
+				@entities.flies.push new Fly @entities, x, y
 
 	class Shot extends Entity
 		constructor: (x, y, direction) ->
@@ -147,7 +147,7 @@ window.onload = ->
 			@vel = v.scale(v.create(Math.cos(direction), Math.sin(direction)), 10)
 
 	class Gun extends Entity
-		constructor: (@shots, x, y) ->
+		constructor: ({shots: @shots}, x, y) ->
 			super "gun", x, y
 			@maxTick = 500
 			@tick = @maxTick
@@ -164,28 +164,31 @@ window.onload = ->
 
 	playState = {
 		setup: =>
-			@fruit = new Fruit GAME_WIDTH/2, GAME_HEIGHT - 50
-			@flies = new jaws.SpriteList
-			@shots = new jaws.SpriteList
-			@spawner = new FlySpawner @fruit, @flies
-			@guns = new jaws.SpriteList
-			@guns.push new Gun(@shots, GAME_WIDTH/2 - 100, GAME_HEIGHT - 25)
-			@guns.push new Gun(@shots, GAME_WIDTH/2 + 100, GAME_HEIGHT - 25)
+			@entities = {
+				fruit: new Fruit GAME_WIDTH/2, GAME_HEIGHT - 50
+				flies: new jaws.SpriteList
+				shots: new jaws.SpriteList
+				guns: new jaws.SpriteList
+			}
+
+			@entities.spawner = new FlySpawner @entities
+			@entities.guns.push new Gun(@entities, GAME_WIDTH/2 - 100, GAME_HEIGHT - 25)
+			@entities.guns.push new Gun(@entities, GAME_WIDTH/2 + 100, GAME_HEIGHT - 25)
 
 			jaws.preventDefaultKeys ["up", "down", "left", "right", "space"]
 
 		update: =>
-			@spawner.update()
-			@guns.update()
-			@shots.update()
-			@flies.update()
+			@entities.spawner.update()
+			@entities.guns.update()
+			@entities.shots.update()
+			@entities.flies.update()
 
 		draw: =>
 			jaws.clear()
-			@shots.draw()
-			@guns.draw()
-			@flies.draw()
-			@fruit.draw()
+			@entities.shots.draw()
+			@entities.guns.draw()
+			@entities.flies.draw()
+			@entities.fruit.draw()
 	}
 
 	jaws.assets.add "assets/img/fruit-fly.png"
