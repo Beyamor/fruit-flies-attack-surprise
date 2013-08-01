@@ -157,7 +157,7 @@ window.onload = ->
 	class Gun extends Entity
 		constructor: (@entities, x, y) ->
 			super "gun", x, y
-			@maxTick = 500
+			@maxTick = 1000
 			@tick = @maxTick
 
 		update: ->
