@@ -1,16 +1,6 @@
 window.onload = ->
-	GAME_WIDTH = 600
+	GAME_WIDTH = 800
 	GAME_HEIGHT = 600
-
-	createSprite = (file, x, y) ->
-		sprite = new jaws.Sprite {
-			image: "assets/img/#{file}.png"
-			x: x
-			y: y
-			anchor: "center"
-		}
-
-		return sprite
 
 	v = {
 		create: (x, y) ->
@@ -43,9 +33,14 @@ window.onload = ->
 			"(#{x}, #{y})"
 	}
 
-	class Entity
-		constructor: (sprite, x, y) ->
-			@sprite = createSprite sprite, x, y
+	class Entity extends jaws.Sprite
+		constructor: (image, x, y) ->
+			super {
+				image: "assets/img/#{image}.png"
+				x: x
+				y: y
+				anchor: "center"
+			}
 			@vel = v.zero()
 			@acc = v.zero()
 			@mass = 10
@@ -76,13 +71,10 @@ window.onload = ->
 			if speed > @maxSpeed
 				@vel = v.scale @vel, (@maxSpeed / speed)
 
-			@sprite.x += @vel.x
-			@sprite.y += @vel.y
+			@x += @vel.x
+			@y += @vel.y
 
-			@sprite.angle = Math.atan2(@vel.y, @vel.x) * 180 / Math.PI
-
-		draw: ->
-			@sprite.draw()
+			@angle = Math.atan2(@vel.y, @vel.x) * 180 / Math.PI
 
 	class Fly extends Entity
 		constructor: (@fruit, @flies, x, y) ->
@@ -91,7 +83,7 @@ window.onload = ->
 		update: ->
 			# flies love fruit
 			fruitForce = {x: 0, y: 0}
-			difference = v.subtract @fruit.sprite, @sprite
+			difference = v.subtract @fruit, this
 			distance = v.length difference
 			if distance > 0
 				desiredSpeed = distance * 0.5
@@ -103,7 +95,7 @@ window.onload = ->
 			hateDistance = 200
 			flyForce = v.zero()
 			for fly in @flies when fly isnt this
-				difference = v.subtract @sprite, fly.sprite
+				difference = v.subtract this, fly
 				distance = v.length difference
 				continue if distance > hateDistance
 
