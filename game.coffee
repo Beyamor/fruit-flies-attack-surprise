@@ -104,7 +104,7 @@ window.onload = ->
 				distance = v.length difference
 				continue if distance > hateDistance
 
-				magnitude = ((hateDistance - distance) / hateDistance) * @maxForce * 0.8
+				magnitude = ((hateDistance - distance) / hateDistance) * @maxForce * 0.4
 				flyForce = v.add(flyForce, v.scale(v.normal(difference), magnitude))
 
 			@applyForces flyForce, fruitForce
@@ -125,18 +125,21 @@ window.onload = ->
 			if @ticks >= @maxTicks
 				@ticks = 0
 
+				# from the side
 				if random.coinFlip()
 					x = if random.coinFlip() then -100 else GAME_WIDTH + 100
-					y = random.inRange(0, GAME_HEIGHT)
+					y = random.inRange(0, GAME_HEIGHT / 2)
+
+				# from the top
 				else
-					y = if random.coinFlip() then -100 else GAME_HEIGHT + 100
+					y = -100
 					x = random.inRange(0, GAME_WIDTH)
 
 				@flies.push new Fly @fruit, @flies, x, y
 
 	playState = {
 		setup: =>
-			@fruit = new Fruit GAME_WIDTH/2, GAME_HEIGHT/2
+			@fruit = new Fruit GAME_WIDTH/2, GAME_HEIGHT - 50
 			@flies = []
 			@spawner = new FlySpawner @fruit, @flies
 
