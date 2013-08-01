@@ -104,15 +104,11 @@ window.onload = ->
 			flyForce = v.zero()
 			for fly in @flies when fly isnt this
 				difference = v.subtract @sprite, fly.sprite
-				#console.log "difference is #{difference.x}, #{difference.y}"
 				distance = v.length difference
-				#console.log "distance is #{distance}"
 				continue if distance > hateDistance
 
 				magnitude = ((hateDistance - distance) / hateDistance) * @maxForce * 0.8
 				flyForce = v.add(flyForce, v.scale(v.normal(difference), magnitude))
-
-			#console.log "fly force is #{flyForce.x}, #{flyForce.y}"
 
 			@applyForces flyForce, fruitForce
 
