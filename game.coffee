@@ -3,11 +3,14 @@ window.onload = ->
 	GAME_HEIGHT = 600
 
 	createSprite = (file, x, y) ->
-		new jaws.Sprite {
+		sprite = new jaws.Sprite {
 			image: "assets/img/#{file}.png"
 			x: x
 			y: y
+			anchor: "center"
 		}
+
+		return sprite
 
 	v = {
 		create: (x, y) ->
@@ -75,6 +78,8 @@ window.onload = ->
 
 			@sprite.x += @vel.x
 			@sprite.y += @vel.y
+
+			@sprite.angle = Math.atan2(@vel.y, @vel.x) * 180 / Math.PI
 
 		draw: ->
 			@sprite.draw()
