@@ -83,7 +83,7 @@ window.onload = ->
 			@angle = Math.atan2(@vel.y, @vel.x) * 180 / Math.PI
 
 	class Fly extends Entity
-		constructor: ({fruit: @fruit, flies: @flies}, x, y) ->
+		constructor: ({fruit: @fruit, flies: @flies, shots: @shots}, x, y) ->
 			super("fruit-fly", x, y)
 
 		update: ->
@@ -110,13 +110,34 @@ window.onload = ->
 				magnitude = ((hateDistance - distance) / hateDistance) * @maxForce * 0.4
 				flyForce = v.add(flyForce, v.scale(v.normal(difference), magnitude))
 
-			@applyForces flyForce, fruitForce
+			# flies suuuper hate bullets
+			hateDistance = 300
+			shotForce = v.zero()
+			@shots.forEach (shot, _, __) =>
+				difference = v.subtract this, shot
+				distance = v.length difference
+				return if distance > hateDistance
+
+				magnitude = ((hateDistance - distance) / hateDistance) * @maxForce * 0.9
+				shotForce = v.add(shotForce, v.scale(v.normal(difference), magnitude))
+
+			# yo, stay inside the room
+			roomForce = v.zero()
+			if @y + @radius > GAME_HEIGHT
+				roomForce.y = -((@y + @radius) - GAME_HEIGHT)
+
+
+			@applyForces roomForce, shotForce, flyForce, fruitForce
 
 			super()
 
 	class Fruit extends Entity
-		constructor: (x, y) ->
+		constructor: (@entities, @state, x, y) ->
 			super("fruit", x, y)
+
+		update: ->
+			if jaws.collideOneWithMany(this, @entities.flies).length isnt 0
+				@state.end()
 
 	class FlySpawner
 		constructor: (@entities) ->
@@ -141,7 +162,7 @@ window.onload = ->
 				@entities.flies.push new Fly @entities, x, y
 
 	class Shot extends Entity
-		constructor: (@entities, x, y, direction) ->
+		constructor: (@entities, @state, x, y, direction) ->
 			super "shot", x, y
 			direction *= Math.PI / 180
 			@vel = v.scale(v.create(Math.cos(direction), Math.sin(direction)), 10)
@@ -152,10 +173,11 @@ window.onload = ->
 			flies = jaws.collideOneWithMany this, @entities.flies
 			for fly in flies
 				@entities.flies.remove fly
+				@state.flyKilled()
 			@entities.shots.remove this if flies.length isnt 0
 
 	class Gun extends Entity
-		constructor: (@entities, x, y) ->
+		constructor: (@entities, @state, x, y) ->
 			super "gun", x, y
 			@maxTick = 1000
 			@tick = @maxTick
@@ -168,40 +190,82 @@ window.onload = ->
 			@tick += jaws.game_loop.tick_duration
 			if jaws.pressed("left_mouse_button") and @tick >= @maxTick
 				@tick = 0
-				@entities.shots.push new Shot @entities, @x, @y, @angle
+				@entities.shots.push new Shot @entities, @state, @x, @y, @angle
 
 	playState = {
-		setup: =>
+		setup: ->
 			@entities = {
-				fruit: new Fruit GAME_WIDTH/2, GAME_HEIGHT - 50
 				flies: new jaws.SpriteList
 				shots: new jaws.SpriteList
 				guns: new jaws.SpriteList
 			}
 
+			@entities.fruit = new Fruit @entities, this, GAME_WIDTH/2, GAME_HEIGHT - 50
 			@entities.spawner = new FlySpawner @entities
-			@entities.guns.push new Gun(@entities, GAME_WIDTH/2 - 100, GAME_HEIGHT - 25)
-			@entities.guns.push new Gun(@entities, GAME_WIDTH/2 + 100, GAME_HEIGHT - 25)
+			@entities.guns.push new Gun(@entities, this, GAME_WIDTH/2 - 100, GAME_HEIGHT - 25)
+			@entities.guns.push new Gun(@entities, this, GAME_WIDTH/2 + 100, GAME_HEIGHT - 25)
 
-			jaws.preventDefaultKeys ["up", "down", "left", "right", "space"]
+			@numberOfFliesKilled = 0
 
-		update: =>
+		update: ->
 			@entities.spawner.update()
 			@entities.guns.update()
 			@entities.shots.update()
 			@entities.flies.update()
+			@entities.fruit.update()
 
-		draw: =>
+		draw: ->
 			jaws.clear()
 			@entities.shots.draw()
 			@entities.guns.draw()
 			@entities.flies.draw()
 			@entities.fruit.draw()
+
+		flyKilled: ->
+			++@numberOfFliesKilled
+
+		end: ->
+			fliesKilled = @numberOfFliesKilled
+			jaws.switchGameState {
+				update: ->
+					jaws.switchGameState mainMenuState if jaws.pressedWithoutRepeat "left_mouse_button"
+
+				draw: ->
+					jaws.clear()
+					jaws.context.fillStyle = "black"
+					jaws.context.font = "bold 32px Courier"
+					jaws.context.fillText("you killed #{fliesKilled} flies!", 100, 250)
+					jaws.context.fillText("good job commander", 100, 300)
+					jaws.context.fillText("but the battle's not over yet!", 100, 350)
+					jaws.context.font = "bold 12px Courier"
+					jaws.context.fillText("(click to play again)", 100, 400)
+			}
 	}
+
+	mainMenuState = {
+		update: ->
+			jaws.switchGameState playState if jaws.pressedWithoutRepeat "left_mouse_button"
+
+		draw: ->
+			jaws.clear()
+			jaws.context.fillStyle = "black"
+			jaws.context.font = "bold 32px Courier"
+			jaws.context.fillText("fruit flies!", 100, 250)
+			jaws.context.fillText("attack! surprise!", 100, 300)
+			jaws.context.font = "bold 12px Courier"
+			jaws.context.fillText("(click to play)", 100, 400)
+	}
+
+	# whatever.
+	jaws.clear = ->
+		jaws.context.fillStyle = "white"
+		jaws.context.beginPath()
+		jaws.context.rect 0, 0, GAME_WIDTH, GAME_HEIGHT
+		jaws.context.fill()
 
 	jaws.assets.add "assets/img/fruit-fly.png"
 	jaws.assets.add "assets/img/fruit.png"
 	jaws.assets.add "assets/img/shot.png"
 	jaws.assets.add "assets/img/gun.png"
 	jaws.init {width: GAME_WIDTH, height: GAME_HEIGHT}
-	jaws.start playState
+	jaws.start mainMenuState
